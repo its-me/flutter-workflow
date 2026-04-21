@@ -26,4 +26,4 @@ jobs:
       - name: Echo variables
         run: |
           echo $TAG_NAME
-          echo $IPA_NAME
+          echo $APK_NAME
