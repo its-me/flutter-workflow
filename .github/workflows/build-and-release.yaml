@@ -48,3 +48,14 @@ jobs:
         run: |
           echo "${{ needs.setup.outputs.tag_name }}"
           echo "${{ needs.setup.outputs.ipa_name }}"
+
+  finalize:
+    needs: [setup, android, ios]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Echo all variables
+        run: |
+          echo "tag_name=${{ needs.setup.outputs.tag_name }}"
+          echo "apk_name=${{ needs.setup.outputs.apk_name }}"
+          echo "ipa_name=${{ needs.setup.outputs.ipa_name }}"
