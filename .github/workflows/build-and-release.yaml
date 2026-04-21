@@ -46,7 +46,7 @@ jobs:
         with:
           channel: stable
       - run: flutter build ipa --no-codesign
-      - run: zip -r ios.zip build/ios/ipa/
+      - run: zip -r ios.zip build/ios/archive/
       - uses: actions/upload-artifact@v4
         with:
           name: ios
