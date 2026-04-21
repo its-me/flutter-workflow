@@ -1,0 +1,52 @@
+name: build and release
+
+
+on:
+  push:
+    branches:
+      - main
+
+
+jobs:
+
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.vars.outputs.tag_name }}
+      apk_name: ${{ steps.vars.outputs.apk_name }}
+      ipa_name: ${{ steps.vars.outputs.ipa_name }}
+
+    steps:
+      - name: Set variables
+        id: vars
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}-${GITHUB_SHA::7}"
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "apk_name=App-${TAG_NAME}.apk" >> $GITHUB_OUTPUT
+          echo "ipa_name=App-${TAG_NAME}.ipa" >> $GITHUB_OUTPUT
+
+  android:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[android]')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Echo variables
+        run: |
+          echo "${{ needs.setup.outputs.tag_name }}"
+          echo "${{ needs.setup.outputs.apk_name }}"
+
+  ios:
+    needs: setup
+    runs-on: macos-latest
+    if: contains(github.event.head_commit.message, '[ios]')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Echo variables
+        run: |
+          echo "${{ needs.setup.outputs.tag_name }}"
+          echo "${{ needs.setup.outputs.ipa_name }}"
