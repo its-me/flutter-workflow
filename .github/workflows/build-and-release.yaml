@@ -30,6 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      android_build_id: ${{ steps.random.outputs.android_build_id }}
+      android_checksum: ${{ steps.random.outputs.android_checksum }}
 
     steps:
       - name: Echo variables
@@ -37,17 +40,32 @@ jobs:
           echo "${{ needs.setup.outputs.tag_name }}"
           echo "${{ needs.setup.outputs.apk_name }}"
 
+      - name: Generate random variables
+        id: random
+        run: |
+          echo "android_build_id=$(openssl rand -hex 8)" >> $GITHUB_OUTPUT
+          echo "android_checksum=$(openssl rand -hex 16)" >> $GITHUB_OUTPUT
+
   ios:
     needs: setup
     runs-on: macos-latest
     permissions:
       contents: write
+    outputs:
+      ios_build_id: ${{ steps.random.outputs.ios_build_id }}
+      ios_checksum: ${{ steps.random.outputs.ios_checksum }}
 
     steps:
       - name: Echo variables
         run: |
           echo "${{ needs.setup.outputs.tag_name }}"
           echo "${{ needs.setup.outputs.ipa_name }}"
+
+      - name: Generate random variables
+        id: random
+        run: |
+          echo "ios_build_id=$(openssl rand -hex 8)" >> $GITHUB_OUTPUT
+          echo "ios_checksum=$(openssl rand -hex 16)" >> $GITHUB_OUTPUT
 
   finalize:
     needs: [setup, android, ios]
@@ -59,3 +77,7 @@ jobs:
           echo "tag_name=${{ needs.setup.outputs.tag_name }}"
           echo "apk_name=${{ needs.setup.outputs.apk_name }}"
           echo "ipa_name=${{ needs.setup.outputs.ipa_name }}"
+          echo "android_build_id=${{ needs.android.outputs.android_build_id }}"
+          echo "android_checksum=${{ needs.android.outputs.android_checksum }}"
+          echo "ios_build_id=${{ needs.ios.outputs.ios_build_id }}"
+          echo "ios_checksum=${{ needs.ios.outputs.ios_checksum }}"
