@@ -4,33 +4,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This repository contains GitHub Actions CI/CD workflows for building and releasing Flutter mobile apps. There are no local build commands — all automation runs on GitHub Actions triggered by pushes to `main`.
+This repository is a Flutter app with a GitHub Actions CI/CD pipeline that builds for all platforms and publishes GitHub Releases on every push to `main`.
 
-## Workflow Triggering
+## Local development
 
-Both workflows fire on push to `main` but are gated by commit message flags:
+```
+flutter run        # run the app
+flutter test       # run tests
+flutter build apk  # build Android (requires Android SDK)
+```
 
-- Include `[android]` in the commit message to trigger the APK build
-- Include `[ios]` in the commit message to trigger the IPA build
-- Both flags can appear in the same commit message to trigger both
+The Flutter app lives at the repository root (`pubspec.yaml`, `lib/`, `android/`, `ios/`, etc.).
 
-## Workflow Structure
+## Workflow pipeline
 
-`.github/workflows/apk-build-branch-and-release.yaml` — Android build, runs on `ubuntu-latest`  
-`.github/workflows/ipa-build-branch-and-release.yaml` — iOS build, runs on `macos-latest`
+Single workflow: `.github/workflows/build-and-release.yaml`
 
-Both workflows follow the same pattern:
-1. Set `TAG_NAME` from `${GITHUB_REF_NAME}-${GITHUB_SHA::7}` (branch + short SHA)
-2. Set artifact name: `App-${TAG_NAME}.apk` or `App-${TAG_NAME}.ipa`
-3. Export both to `$GITHUB_ENV` for use in subsequent steps
+**Job execution order:**
 
-Both require `permissions: contents: write` (needed for creating releases/tags).
+```
+setup
+  ├── android  (ubuntu-latest)
+  ├── ios      (macos-latest)
+  ├── web      (ubuntu-latest)
+  ├── linux    (ubuntu-latest)
+  ├── macos    (macos-latest)
+  └── windows  (windows-latest)
+        └── finalize
+              ├── publish-android
+              ├── publish-ios
+              ├── publish-web
+              ├── publish-linux
+              ├── publish-macos
+              └── publish-windows
+```
 
-## Current State
+**`setup` job** — computes `tag_name` (`$GITHUB_REF_NAME-$GITHUB_SHA::7`) and `release_name` (`App-$TAG_NAME`), exposed as job outputs consumed by all downstream jobs.
 
-The workflows are stubs — they only set and echo variables. The remaining steps (checkout, Flutter SDK setup, build, artifact upload, GitHub Release creation) have not yet been added.
-Typical next steps to complete each workflow:
-- `actions/checkout` to clone the Flutter app repo
-- `subosito/flutter-action` (or equivalent) to install Flutter
-- `flutter build apk` / `flutter build ipa` with signing secrets
-- `actions/upload-artifact` or `softprops/action-gh-release` to publish the artifact using `$APK_NAME` / `$IPA_NAME`
+**Build jobs** — each checks out the repo, installs Flutter stable via `subosito/flutter-action@v2`, builds for its platform, and uploads a zipped artifact via `actions/upload-artifact@v4`:
+
+| Job | Runner | Build command | Artifact path |
+|-----|--------|--------------|---------------|
+| android | ubuntu-latest | `flutter build apk --debug` | `build/app/outputs/flutter-apk/app-debug.apk` |
+| ios | macos-latest | `flutter build ipa --no-codesign` | `build/ios/archive/` (xcarchive, no IPA — codesign not configured) |
+| web | ubuntu-latest | `flutter build web` | `build/web/` |
+| linux | ubuntu-latest | `flutter build linux` (requires `ninja-build libgtk-3-dev`) | `build/linux/x64/release/bundle/` |
+| macos | macos-latest | `flutter build macos` | `build/macos/Build/Products/Release/` |
+| windows | windows-latest | `flutter build windows` | `build/windows/x64/runner/Release/` |
+
+**`finalize` job** — runs after all 6 builds complete; echoes `tag_name` and `release_name`.
+
+**Publish jobs** — run in parallel after `finalize`; each downloads its artifact and creates/updates the GitHub Release named `App-$TAG_NAME` using `softprops/action-gh-release@v2`. Require `permissions: contents: write`.
