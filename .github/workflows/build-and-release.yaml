@@ -32,6 +32,10 @@ jobs:
         with:
           channel: stable
       - run: flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: build/app/outputs/flutter-apk/app-debug.apk
 
   ios:
     needs: setup
@@ -42,6 +46,11 @@ jobs:
         with:
           channel: stable
       - run: flutter build ipa --no-codesign
+      - run: zip -r ios.zip build/ios/ipa/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: ios.zip
 
   web:
     needs: setup
@@ -52,6 +61,11 @@ jobs:
         with:
           channel: stable
       - run: flutter build web
+      - run: zip -r web.zip build/web/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: web.zip
 
   linux:
     needs: setup
@@ -65,6 +79,11 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y ninja-build libgtk-3-dev
           flutter build linux
+      - run: zip -r linux.zip build/linux/x64/release/bundle/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: linux.zip
 
   macos:
     needs: setup
@@ -75,6 +94,11 @@ jobs:
         with:
           channel: stable
       - run: flutter build macos
+      - run: zip -r macos.zip build/macos/Build/Products/Release/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: macos.zip
 
   windows:
     needs: setup
@@ -85,6 +109,11 @@ jobs:
         with:
           channel: stable
       - run: flutter build windows
+      - run: Compress-Archive -Path build/windows/x64/runner/Release/ -DestinationPath windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: windows.zip
 
   finalize:
     needs: [setup, android, ios, web, linux, macos, windows]
@@ -95,3 +124,93 @@ jobs:
         run: |
           echo "tag_name=${{ needs.setup.outputs.tag_name }}"
           echo "release_name=${{ needs.setup.outputs.release_name }}"
+
+  publish-android:
+    needs: [setup, finalize]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          name: ${{ needs.setup.outputs.release_name }}
+          files: app-debug.apk
+
+  publish-ios:
+    needs: [setup, finalize]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          name: ${{ needs.setup.outputs.release_name }}
+          files: ios.zip
+
+  publish-web:
+    needs: [setup, finalize]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          name: ${{ needs.setup.outputs.release_name }}
+          files: web.zip
+
+  publish-linux:
+    needs: [setup, finalize]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          name: ${{ needs.setup.outputs.release_name }}
+          files: linux.zip
+
+  publish-macos:
+    needs: [setup, finalize]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          name: ${{ needs.setup.outputs.release_name }}
+          files: macos.zip
+
+  publish-windows:
+    needs: [setup, finalize]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          name: ${{ needs.setup.outputs.release_name }}
+          files: windows.zip
