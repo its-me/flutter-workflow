@@ -29,9 +29,6 @@ Both require `permissions: contents: write` (needed for creating releases/tags).
 ## Current State
 
 The workflows are stubs — they only set and echo variables. The remaining steps (checkout, Flutter SDK setup, build, artifact upload, GitHub Release creation) have not yet been added.
-
-**Known bug:** `apk-build-branch-and-release.yaml` echoes `$IPA_NAME` instead of `$APK_NAME` in the "Echo variables" step — `$IPA_NAME` is never set in that workflow so it prints empty.
-
 Typical next steps to complete each workflow:
 - `actions/checkout` to clone the Flutter app repo
 - `subosito/flutter-action` (or equivalent) to install Flutter
